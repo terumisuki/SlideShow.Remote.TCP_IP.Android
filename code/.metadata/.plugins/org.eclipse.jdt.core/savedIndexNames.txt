@@ -1,0 +1,3 @@
+INDEX VERSION 1.126+C:\Users\alex\Documents\GitHub\SlideShow.Remote.TCP_IP.Android\code\.metadata\.plugins\org.eclipse.jdt.core
+803717534.index
+2281604045.index

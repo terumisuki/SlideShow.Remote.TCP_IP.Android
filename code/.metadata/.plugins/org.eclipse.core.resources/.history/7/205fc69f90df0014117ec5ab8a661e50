@@ -1,0 +1,146 @@
+package slideshow.remote.control;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+import android.os.Bundle;
+import android.app.Activity;
+import android.util.Log;
+import android.view.Menu;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.Spinner;
+
+public class MainActivity extends Activity {
+	
+	private String DISPLAY_LABEL_OF_LIVING_ROOM = "Living Room";
+	private String DISPLAY_LABEL_OF_STUDIO = "Studio";
+	private String DISPLAY_LABEL_OF_KITCHEN = "Kitchen";
+	
+	private String IP_OF_LIVING_ROOM = "192.168.1.1";
+	private String IP_OF_STUDIO = "192.168.1.130";
+	private String IP_OF_KITCHEN = "192.168.1.3";
+	
+	private int PORT_OF_SERVER = 8888;
+	
+	private Spinner clientDeviceNameSpinner;
+	private Button pausePlaySlideShowButton;
+	private Button stopSlideShowButton;
+	private String logTag = "remote";
+	private String PREPEND_TO_ERROR_LOG = "OUCH!!! ... ";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        configurePausePlaySlideShowButton();
+        configureClientDeviceNameSpinner();
+        configureStopSlideShowButton();
+    }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+    
+    private void configurePausePlaySlideShowButton() {
+        this.pausePlaySlideShowButton = (Button)findViewById(R.id.btnPausePlay);
+        this.pausePlaySlideShowButton.setOnClickListener(new View.OnClickListener() {
+			
+			public void onClick(View v) {
+				Thread cThread = new Thread(new PausePlaySlideShowThread());
+				cThread.start();
+			}
+		});
+	}
+    
+	private void configureStopSlideShowButton() {
+		this.stopSlideShowButton = (Button)findViewById(R.id.btnStopSlideShow);
+		this.stopSlideShowButton.setOnClickListener(new View.OnClickListener() {
+			
+			public void onClick(View v) {
+				Thread cThread = new Thread(new StopSlideShowThread());
+				cThread.start();
+			}
+		});
+	}
+
+	private void configureClientDeviceNameSpinner() {
+        this.clientDeviceNameSpinner = (Spinner)findViewById(R.id.clientDeviceNameSpinner);
+        String [] arrClients ={this.DISPLAY_LABEL_OF_LIVING_ROOM, this.DISPLAY_LABEL_OF_STUDIO, this.DISPLAY_LABEL_OF_KITCHEN};
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,arrClients);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        this.clientDeviceNameSpinner.setAdapter(adapter);		
+	}
+
+    public class PausePlaySlideShowThread implements Runnable {
+    	public void run(){
+    		try {
+    			SendMessage("1$");
+    		} catch (Exception e){
+    			Log.d(logTag, "OUCH!!! ... PausePlaySlideShowThread ... " + e.toString());
+    		}
+    	}
+    }
+    
+    public class StopSlideShowThread implements Runnable {
+    	public void run(){
+    		try {
+    			SendMessage("2$");
+    		} catch (Exception e){
+    			Log.d(logTag, "OUCH!!! ... StopSlideShowThread ... " + e.toString());
+    		}
+    	}
+    }
+
+	public void SendMessage(String message) {
+		InetAddress connectingIPAddress = getClientDeviceIp();
+		Log.d(this.logTag, "Connecting to " + connectingIPAddress.toString() + "...");
+		Socket socket = null;
+		try {
+			socket = new Socket(connectingIPAddress, this.PORT_OF_SERVER);
+		} catch (IOException e) {
+			Log.d(this.logTag, "OUCH!!! ... SendMessage ... " + e.toString());
+			return;
+		}
+		Log.d(this.logTag, "Requesting slide show toggle.");
+		PrintWriter out = null;
+		try {
+			out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+		} catch (IOException e) {
+			Log.d(this.logTag, "OUCH!!! ... SendMessage ... " + e.toString());
+		}
+		// 1 = pause/play slide show
+		// 2 = stop slide show
+		out.println(message);
+	}
+	
+	public InetAddress getClientDeviceIp() {
+		String clientDeviceIpString = null;
+		String slectedClientDeviceName = this.clientDeviceNameSpinner.getSelectedItem().toString();
+		InetAddress ip = null;
+		if (slectedClientDeviceName == this.DISPLAY_LABEL_OF_LIVING_ROOM){
+			clientDeviceIpString = this.IP_OF_LIVING_ROOM;
+		} else if(slectedClientDeviceName == this.DISPLAY_LABEL_OF_STUDIO) {
+			clientDeviceIpString = this.IP_OF_STUDIO;
+		} else if(slectedClientDeviceName == this.DISPLAY_LABEL_OF_KITCHEN) {
+			clientDeviceIpString = this.IP_OF_KITCHEN;
+		}
+		try {
+			ip = InetAddress.getByName(clientDeviceIpString);
+		} catch (UnknownHostException e) {
+			Log.d(this.logTag, "OUCH!!! ... getClientDeviceIp ... " + e.toString());
+		}
+		return ip;
+	}
+
+}

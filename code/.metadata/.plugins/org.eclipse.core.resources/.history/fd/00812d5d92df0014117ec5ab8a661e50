@@ -1,0 +1,6 @@
+package slideshow.remote.control;
+
+public final class Constants {
+
+		private Constants(){}
+}
